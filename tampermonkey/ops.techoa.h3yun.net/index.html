@@ -1,0 +1,275 @@
+
+<div class="container fixed-top">
+  <P class="mh">{{text}}</P>
+  <div>
+    <div>
+      schemaCode:<input type="text" v-model="schemaCode">
+      schemaName:<input type="text" v-model="schemaName">
+      bizObjectId:<input type="text" v-model="bizObjectId">
+    </div>
+    <br>
+    <div class="query-row"> 
+        <div class="row-item">
+           查询表单编码: <input type="text" name="functionnode" v-model="schemaName" placeholder="表单名称"
+          @change="handleChange('functionnode', {schemaName})">
+        </div>
+        <div class="row-item">
+            查询业务数据：<input type="text" name="bizObject" v-model="bizObjectId" placeholder="bizObjectId"
+          @change="handleChange('bizObject', {schemaCode}, {bizObjectId})">
+        </div>
+        <div class="row-item">
+          查询formSetting：<input type="text" name="formSetting" v-model="schemaCode" placeholder="SchemaCode"
+        @change="handleChange('formSetting', {schemaCode})">
+        </div>
+        <div class="row-item"> 
+          查询bizObjectSchema：<input type="text" name="bizObjectSchema" v-model="schemaCode" placeholder="SchemaCode"
+        @change="handleChange('bizObjectSchema', {schemaCode})">
+        </div>
+        <div class="row-item"> 
+          查询workflowtemplate：<input type="text" name="workflowtemplate" v-model="schemaCode" placeholder="SchemaCode"
+        @change="handleChange('workflowtemplate', {schemaCode})">
+      </div>
+      
+    </div>
+  </div>
+</div>
+<script id="xjs">
+
+  new Vue({
+    el: "#xapp",
+    data() {
+      return {
+        text: "",
+        loading: false,
+        schemaName: "",
+        schemaCode: "",
+        bizObjectId: "",
+        sqls: {
+          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname='{schemaName}'`,
+          workflowtemplate: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}'  order by  workflowversion desc limit 0,3`,
+          bizObject: `select * from i_{schemaCode} where objectid='{bizObjectId}'`,
+          formSetting:`select DisplayName,SchemaCode,ModifiedTime,FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
+          bizObjectSchema:`select  SchemaCode,DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}'`,
+        }
+      };
+    },
+    mounted() {
+
+      if(window.location.pathname==="/user/login"){
+          const button = document.querySelector("button");
+          button.addEventListener("click", () => {
+             const username = document.querySelector("#username").value;
+             const password = document.querySelector("#password").value;
+             sessionStorage.setItem("username", username);
+             sessionStorage.setItem("password", password);
+          });
+      }
+      else
+      {  
+        //setInterval  setTimeout
+        setInterval(() => {
+          this.showOnesLink();
+        }, 1000);
+    }
+
+    },
+    methods: {
+      //弹窗框界面自动登录 10s后自动关闭
+      async AutoLogin() {
+        if (!this.loading) {
+          this.loading = true;
+          // Create the popup box
+          const popup = document.createElement("div");
+          popup.id = "popup";
+          popup.style.display = "none";
+          popup.className = "modal";
+          popup.innerHTML = "<div class='modal-content'><p>正在登录</p></div>";
+
+          // Add the popup box to the document
+          document.body.appendChild(popup);
+
+          // Show the popup box
+          popup.style.display = "block";
+
+          // Close the popup box after 10 seconds
+          setTimeout(function () {
+            popup.style.display = "none";
+            document.body.removeChild(popup);
+          }, 3000);
+
+          const username = sessionStorage.getItem("username");
+          const password = sessionStorage.getItem("password");
+          debugger;
+          const result = await fetch(new Request('https://ops.techoa.h3yun.net/api/sessions/'), {
+            method: 'post',
+            headers: {
+              'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify({ "remember_me": true, "code": username, "password": password })
+          }).then(res => {
+            console.log(res);
+            res.json().then((data) => {
+              console.log(data);
+              const newtoken = JSON.stringify({ value: data.result.token, expire: 1698917919306 });
+              console.log(newtoken);
+              localStorage.setItem("pro__Access-Token", newtoken);
+              this.loading = false;
+
+              return data;
+            }).catch((err) => {
+              console.log(err);
+            })
+
+          })
+            .catch(error => {
+              console.log('出错了:', error);
+            })
+
+
+        }
+
+      },
+
+      showOnesLink() {
+        const token = JSON.parse(localStorage.getItem("pro__Access-Token"));
+        if (token != null) {
+          const expire = JSON.parse(window.atob(token.value.slice(0, token.value.indexOf(".")))).exp * 1000;
+          const timespan = (expire - Date.now()) / 1000;
+          var d1 = new Date(expire);
+          var d2 = new Date(Date.now());
+
+          //页面加载时设置需要倒计时的秒数，计算小时
+          var hour = parseInt(timespan / 3600);
+
+          //计算分钟
+          var min = parseInt((timespan % 3600) / 60);
+
+          //计算秒
+          var second = parseInt((timespan % 3600) % 60);
+
+          //写入页面显示
+          this.text = "token到期时间" + d1.toLocaleString() + "，剩余" + hour + "时" + min + "分" + second + "秒";
+          if (timespan < 0) {
+            if (!this.loading) {
+              this.AutoLogin();
+
+            }
+          }
+
+        }
+        else {
+          if (!this.loading) {
+            this.AutoLogin();
+          }
+        }
+
+      },
+      handleChange(key, ...arguments) {
+        debugger;
+        let map = {};
+        arguments.map(item => {
+          const keys = Object.keys(item);
+          keys.forEach(key => {
+            map[key] = item[key];
+          })
+        });
+
+        const sql = this.format(this.sqls[key], map);
+
+        if (sql.search(/\{(\d+)\}/g) == -1) {
+          //模拟鼠标事件在document.getElementById("sql") 这个teaxtarea上输入字符串'abc'
+          document.getElementById("sql").value = sql;
+          document.getElementById("sql").dispatchEvent(new Event('input', { bubbles: true }));
+          document.getElementsByTagName("button")[0].click();
+        }
+
+      },
+      setNativeValue(element, value) {
+        const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
+        const prototype = Object.getPrototypeOf(element);
+        const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
+
+        if (valueSetter && valueSetter !== prototypeValueSetter) {
+          prototypeValueSetter.call(element, value);
+        } else {
+          valueSetter.call(element, value);
+        }
+      },
+      /**
+     * 格式化字符串
+     * @param 数值
+     * @param 类型
+     * map = {a: "aValue", b: "bValue"} format("{a} and {b}", map) ---=》 aValue and bValue
+     * @returns {string}
+     */
+      format(template, map) {
+        if (!template) {
+          return ''
+        }
+
+        if (!map) {
+          return template
+        }
+
+        for (let mapKey in map) {
+
+          template = template.replaceAll('{' + mapKey + '}', map[mapKey])
+        }
+        return template;
+      }
+
+
+    }
+  });
+</script>
+
+
+<style id="xcss">
+  .container {
+    position: absolute;
+    top: 10px;
+    text-align: center;
+    font-size: small;
+    width: 50%;
+    z-index: 10;
+    right: 100px;
+    background-color:skyblue;
+    opacity: 0.8;
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  .fixed-top {
+    position: fixed;
+    top: 0;
+  }
+  .query-row { 
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: left;
+    /* align-items: center; */
+  }
+  .row-item{
+     margin-left: 20px; 
+     margin-top: 5px;
+     margin-bottom: 5px;
+  }
+</style>
