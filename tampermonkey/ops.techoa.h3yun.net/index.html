@@ -1,33 +1,32 @@
 
 <div class="container fixed-top">
   <P class="mh">{{text}}</P>
-  <div>
-    <div>
-      schemaCode:<input type="text" v-model="schemaCode">
-      schemaName:<input type="text" v-model="schemaName">
-      bizObjectId:<input type="text" v-model="bizObjectId">
-    </div>
-    <br>
+  <div>  
     <div class="query-row"> 
         <div class="row-item">
            查询表单编码: <input type="text" name="functionnode" v-model="schemaName" placeholder="表单名称"
           @change="handleChange('functionnode', {schemaName})">
+          <button @click="handleChange('functionnode', {schemaName})">查询functionnode</button>
         </div>
         <div class="row-item">
             查询业务数据：<input type="text" name="bizObject" v-model="bizObjectId" placeholder="bizObjectId"
           @change="handleChange('bizObject', {schemaCode}, {bizObjectId})">
-        </div>
+          <button @click="handleChange('bizObject', {schemaCode}, {bizObjectId})">查询bizObject</button>
+        </div> 
         <div class="row-item">
           查询formSetting：<input type="text" name="formSetting" v-model="schemaCode" placeholder="SchemaCode"
         @change="handleChange('formSetting', {schemaCode})">
+        <button @click="handleChange('formSetting', {schemaCode})">查询formSetting</button>
         </div>
         <div class="row-item"> 
           查询bizObjectSchema：<input type="text" name="bizObjectSchema" v-model="schemaCode" placeholder="SchemaCode"
         @change="handleChange('bizObjectSchema', {schemaCode})">
+        <button @click="handleChange('bizObjectSchema', {schemaCode})">查询bizObjectSchema</button>
         </div>
         <div class="row-item"> 
           查询workflowtemplate：<input type="text" name="workflowtemplate" v-model="schemaCode" placeholder="SchemaCode"
         @change="handleChange('workflowtemplate', {schemaCode})">
+        <button @click="handleChange('workflowtemplate', {schemaCode})">查询workflowtemplate</button>
       </div>
       
     </div>
@@ -45,11 +44,11 @@
         schemaCode: "",
         bizObjectId: "",
         sqls: {
-          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname='{schemaName}'`,
+          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname like '%{schemaName}%'`,
           workflowtemplate: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}'  order by  workflowversion desc limit 0,3`,
           bizObject: `select * from i_{schemaCode} where objectid='{bizObjectId}'`,
           formSetting:`select DisplayName,SchemaCode,ModifiedTime,FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
-          bizObjectSchema:`select  SchemaCode,DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}'`,
+          bizObjectSchema:`select  SchemaCode,DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
         }
       };
     },
