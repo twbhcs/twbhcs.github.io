@@ -44,9 +44,9 @@
         schemaCode: "",
         bizObjectId: "",
         sqls: {
-          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname like '%{schemaName}%'`,
-          workflowtemplate: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}'  order by  workflowversion desc limit 0,3`,
-          bizObject: `select * from i_{schemaCode} where objectid='{bizObjectId}'`,
+          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname like '%{schemaName}%' or code like '%{schemaName}%'`,
+          workflowtemplate: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}' and workflowversion>0  order by  workflowversion desc limit 0,3`,
+          bizObject: `select * from i_{schemaCode} where if('{bizObjectId}'='',  objectid!='',   objectid='{bizObjectId}')`,
           formSetting:`select DisplayName,SchemaCode,ModifiedTime,FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
           bizObjectSchema:`select  SchemaCode,DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
         }
@@ -169,7 +169,7 @@
         arguments.map(item => {
           const keys = Object.keys(item);
           keys.forEach(key => {
-            map[key] = item[key];
+            map[key] = item[key].trim();
           })
         });
 
