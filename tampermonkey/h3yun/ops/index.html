@@ -10,13 +10,17 @@
         </div>
         <div class="row-item">
             查询业务数据：<input type="text" name="bizObject" v-model="bizObjectId" placeholder="bizObjectId"
-          @change="handleChange('bizObject', {schemaCode}, {bizObjectId})">
-          <button @click="handleChange('bizObject', {schemaCode}, {bizObjectId})">查询bizObject</button>
+          @change="handleChange(`${bizObjectKey}`, {schemaCode}, {bizObjectId})">
+          <button @click="handleChange(`${bizObjectKey}`, {schemaCode}, {bizObjectId})">查询bizObject</button>  
+          <button @click="handleChange('workItemKey', {schemaCode}, {bizObjectId})">查询Workitem</button>  
+          <button @click="handleChange('workflowInstanceKey', {schemaCode}, {bizObjectId})">查询WorkflowInstance</button>  
         </div> 
         <div class="row-item">
           查询formSetting：<input type="text" name="formSetting" v-model="schemaCode" placeholder="SchemaCode"
         @change="handleChange('formSetting', {schemaCode})">
         <button @click="handleChange('formSetting', {schemaCode})">查询formSetting</button>
+        <button @click="handleChange('listViewSetting', {schemaCode})">查询listViewSetting</button>
+        <button @click="handleChange('trigger', {schemaCode})">查询自动化</button>
         </div>
         <div class="row-item"> 
           查询bizObjectSchema：<input type="text" name="bizObjectSchema" v-model="schemaCode" placeholder="SchemaCode"
@@ -25,8 +29,8 @@
         </div>
         <div class="row-item"> 
           查询workflowtemplate：<input type="text" name="workflowtemplate" v-model="schemaCode" placeholder="SchemaCode"
-        @change="handleChange('workflowtemplate', {schemaCode})">
-        <button @click="handleChange('workflowtemplate', {schemaCode})">查询workflowtemplate</button>
+        @change="handleChange(`${workflowtemplateKey}`, {schemaCode}, {bizObjectId})">
+        <button @click="handleChange(`${workflowtemplateKey}`, {schemaCode}, {bizObjectId})">查询workflowtemplate</button>
       </div>
       
     </div>
@@ -44,13 +48,42 @@
         schemaCode: "",
         bizObjectId: "",
         sqls: {
-          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname like '%{schemaName}%' or code like '%{schemaName}%'`,
-          workflowtemplate: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}' and workflowversion>0  order by  workflowversion desc limit 0,3`,
-          bizObject: `select * from i_{schemaCode} where if('{bizObjectId}'='',  objectid!='',   objectid='{bizObjectId}')`,
-          formSetting:`select DisplayName,SchemaCode,ModifiedTime,FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
-          bizObjectSchema:`select  SchemaCode,DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
+          functionnode: `select b.code appcode ,b.displayname appname,a.code,a.DisplayName ,a.ParentCode,a.NodeType from h_functionnode  a join  h_functionnode  b on a.appcode =b.code where a.displayname like '%{schemaName}%' or a.code like '%{schemaName}%'`,
+          workflowtemplate: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}' order by  workflowversion desc limit 0,1`,
+          workflowtemplateWithBizObjectId: `select * from h_publishedworkflowtemplate where schemacode='{schemaCode}' and  workflowversion=(select  workflowversion from h_workflowinstance where bizobjectid='{bizObjectId}')`,
+          bizObjectWithBizObjectId: `select * from i_{schemaCode} where objectid='{bizObjectId}'`,
+          bizObjectWithSeqNoOrName: `select * from i_{schemaCode} where seqNo='{bizObjectId}' or name like '%{bizObjectId}%'`,
+          bizObjectAll: `select * from i_{schemaCode}  order by createdtime desc`,
+          workflowInstanceKey:`select * from h_workflowinstance where bizobjectid = '{bizObjectId}'`,
+          workItemKey:`select (select name from h_user where h_user.objectid=Participant) as username, h_workitem.* from h_workitem where bizobjectid = '{bizObjectId}' order by tokenId`,
+          formSetting:`select SchemaCode,(select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,ModifiedTime,Actions,FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
+          listViewSetting:`select  * from h_publishedlistviewsetting where schemacode='{schemaCode}'`,
+          trigger:`select  * from h_trigger where schemacode='{schemaCode}'`,
+          bizObjectSchema:`select  SchemaCode,  (select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
+
         }
       };
+    },
+    computed: {
+      bizObjectKey()  {
+        if(this.bizObjectId) {
+          if(this.bizObjectId.trim().length===36) { 
+              return 'bizObjectWithBizObjectId';
+          }  else {
+              return 'bizObjectWithSeqNoOrName';
+          }
+
+        } else {
+          return 'bizObjectAll';
+        }
+      },
+      workflowtemplateKey()  {
+        if(this.bizObjectId) {
+          return 'workflowtemplateWithBizObjectId';
+        } else {
+          return 'workflowtemplate';
+        }
+      }
     },
     mounted() {
 
@@ -216,6 +249,7 @@
         }
         return template;
       }
+
 
 
     }

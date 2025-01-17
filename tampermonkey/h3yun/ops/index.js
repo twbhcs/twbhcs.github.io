@@ -36,7 +36,7 @@ function loadScript(url, callback) {
     document.getElementsByTagName('head')[0].appendChild(script);
 }
 
-loadScript('https://cdn.bootcdn.net/ajax/libs/vue/2.6.12/vue.min.js', function () {
+loadScript('https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/vue/2.6.14/vue.min.js', function () {
     let d = document.createElement("div");
     d.id = "xapp";
     d.innerHTML = GM_getResourceText("page");
@@ -44,6 +44,6 @@ loadScript('https://cdn.bootcdn.net/ajax/libs/vue/2.6.12/vue.min.js', function (
     GM_addStyle(document.querySelector("#xcss").innerText);
     eval(document.querySelector("#xjs").innerText);
 });
-loadScript('https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js', function () { });
+loadScript('https://unpkg.com/axios@1.7.7/dist/axios.min.js', function () { });
 loadScript('https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js', function () { });
 
