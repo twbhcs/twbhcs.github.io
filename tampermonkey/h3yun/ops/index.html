@@ -1,8 +1,8 @@
 
 <div class="container fixed-top">
-  <P class="mh">{{text}}</P>
+  <P class="mh" v-show="approachingExp" style="color: red;" >{{text}}</P>
   <div>  
-    <div class="query-row"> 
+    <div class="query-row" v-if="type=='db'"> 
         <div class="row-item">
            查询表单编码: <input type="text" name="functionnode" v-model="schemaName" placeholder="表单名称"
           @change="handleChange('functionnode', {schemaName})">
@@ -31,19 +31,27 @@
           查询workflowtemplate：<input type="text" name="workflowtemplate" v-model="schemaCode" placeholder="SchemaCode"
         @change="handleChange(`${workflowtemplateKey}`, {schemaCode}, {bizObjectId})">
         <button @click="handleChange(`${workflowtemplateKey}`, {schemaCode}, {bizObjectId})">查询workflowtemplate</button>
+      </div> 
+    </div>
+    <div class="query-row" v-if="type==''"> 
+      <div class="row-item">
       </div>
-      
     </div>
   </div>
 </div>
-<script id="xjs">
+<script  type="module" id="xjs">
+// import mqtt from 'mqtt';
 
   new Vue({
     el: "#xapp",
     data() {
       return {
         text: "",
+        approachingExp:false,
         loading: false,
+        type:"db",
+        client: null,
+        message: '',
         schemaName: "",
         schemaCode: "",
         bizObjectId: "",
@@ -56,13 +64,36 @@
           bizObjectAll: `select * from i_{schemaCode}  order by createdtime desc`,
           workflowInstanceKey:`select * from h_workflowinstance where bizobjectid = '{bizObjectId}'`,
           workItemKey:`select (select name from h_user where h_user.objectid=Participant) as username, h_workitem.* from h_workitem where bizobjectid = '{bizObjectId}' order by tokenId`,
-          formSetting:`select SchemaCode,(select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,ModifiedTime,Actions,FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
+          formSetting:`select SchemaCode,(select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,ModifiedTime,Actions,REGEXP_REPLACE( REGEXP_REPLACE(FormContent, '^<string>', ''),  '</string>$', ''  ) FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
           listViewSetting:`select  * from h_publishedlistviewsetting where schemacode='{schemaCode}'`,
           trigger:`select  * from h_trigger where schemacode='{schemaCode}'`,
-          bizObjectSchema:`select  SchemaCode,  (select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,CreatedTime,ModifiedTime,ChildSchemas,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
+          bizObjectSchema:`select  SchemaCode,  (select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,CreatedTime,ModifiedTime, ExtractValue(Content, '/BizObjectSchema/Properties/PropertySchema/ChildSchema/BizObjectSchema/DisplayName') ChildSchemaNames ,ExtractValue(Content, '/BizObjectSchema/Properties/PropertySchema/ChildSchema/BizObjectSchema/SchemaCode') ChildSchemaCodes,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
 
         }
       };
+    },
+    created() {
+    // // 连接到 MQTT 服务器
+    //   this.client = mqtt.connect('mqtt://broker.hivemq.com');
+    //   // 监听连接成功事件
+    //   this.client.on('connect', () => {
+    //     console.log('Connected to MQTT broker');
+    //     // 订阅主题
+    //     this.client.subscribe('example-topic');
+    //   });
+    //   // 监听消息接收事件
+    //   this.client.on('message', (topic, message) => {
+    //     // 当接收到消息时更新数据
+    //     if (topic === 'example-topic') {
+    //       this.message = message.toString();
+    //     }
+    //   });
+    },
+    beforeDestroy() {
+      // 当组件销毁时断开连接
+      // if (this.client) {
+      //   this.client.end();
+      // }
     },
     computed: {
       bizObjectKey()  {
@@ -85,9 +116,11 @@
         }
       }
     },
+    
     mounted() {
-
-      if(window.location.pathname==="/user/login"){
+      const pathname =  window.location.pathname;
+      console.log(pathname);
+      if(pathname ==="/user/login"){
           const button = document.querySelector("button");
           button.addEventListener("click", () => {
              const username = document.querySelector("#username").value;
@@ -101,6 +134,7 @@
         //setInterval  setTimeout
         setInterval(() => {
           this.showOnesLink();
+          //this.listenResponse();
         }, 1000);
     }
 
@@ -161,7 +195,25 @@
         }
 
       },
-
+      listenResponse(){
+        const observer = new PerformanceObserver((list) => {
+          list.getEntries().forEach(entry => {
+            // if (entry.initiatorType === 'xmlhttprequest' || entry.initiatorType === 'fetch') {
+            //   console.log('请求类型：', entry.initiatorType, 'URL：', entry.name);
+            // }
+            if (entry.entryType === 'resource') {
+             
+              if(entry.responseStatus === 200 && entry.name.startsWith("https://dataquery.h3yun.net/api/executeSql")) {
+                setTimeout(() => {
+                  console.log('资源 URL:', entry.name);
+                  console.log('加载耗时:', entry.duration.toFixed(2) + 'ms');
+                }, 3000);
+              }
+            }
+          });
+        });
+        observer.observe({ entryTypes: ['resource'] });
+      },
       showOnesLink() {
         const token = JSON.parse(localStorage.getItem("pro__Access-Token"));
         if (token != null) {
@@ -180,7 +232,10 @@
           var second = parseInt((timespan % 3600) % 60);
 
           //写入页面显示
-          this.text = "token到期时间" + d1.toLocaleString() + "，剩余" + hour + "时" + min + "分" + second + "秒";
+          this.text = "token到期时间" + d1.toLocaleString() + "，剩余" + hour + "时" + min + "分" + second + "秒"; 
+          if(hour<1){
+            this.approachingExp=true;
+          }
           if (timespan < 0) {
             if (!this.loading) {
               this.AutoLogin();
@@ -213,8 +268,37 @@
           document.getElementById("sql").value = sql;
           document.getElementById("sql").dispatchEvent(new Event('input', { bubbles: true }));
           document.getElementsByTagName("button")[0].click();
+
+          setTimeout(() => {
+            //this.formatContent();
+            this.formatBehindCode()
+          }, 3000);
         }
 
+      },
+      formatContent(){
+        const formContent = this.findContent('FormContent');
+        if(formContent){ 
+          this.formatJson(formContent);
+        }
+
+      },
+       formatBehindCode(){
+        this.editContent('BehindCode');
+      },
+      formatJson(jsonString){
+          try {
+            // 解析JSON字符串为JavaScript对象
+            const jsonObject = JSON.parse(jsonString);
+            // 将JavaScript对象格式化为字符串，使用4个空格缩进
+            const formattedJson = JSON.stringify(jsonObject, null, 4);
+            console.log(formattedJson);
+          } catch (error) {
+              console.error('解析JSON时出错:', error.message);
+          }
+      },
+      formatXml(xmlString){
+          
       },
       setNativeValue(element, value) {
         const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
@@ -248,10 +332,47 @@
           template = template.replaceAll('{' + mapKey + '}', map[mapKey])
         }
         return template;
-      }
-
-
-
+      },
+      findContent(key){
+        const spans = document.getElementsByTagName('span');
+       for (let i = 0; i < spans.length; i++) {
+           if (spans[i].textContent.includes(key)) {
+               console.log(spans[i]);
+               const str = spans[i].parentElement.nextElementSibling.innerText;
+               return str.replace(/<\/?string>/g, ''); 
+           }
+       }
+       return null;
+      },
+      editContent(key) {
+        const spans = document.getElementsByTagName('span');
+        for (let i = 0; i < spans.length; i++) {
+          if (spans[i].textContent.includes(key)) {
+            console.log(spans[i]);
+            const keyDiv = spans[i].parentElement;
+            const codeDiv = spans[i].parentElement.nextElementSibling;
+            const html = codeDiv.innerHTML
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&amp;/g, '&')
+              .replace(/&amp;lt;/g, '<')
+              .replace(/&amp;gt;/g, '>')
+              .replace(/&amp;amp;/g, '&')
+              .replace(/<\/?string>/g, '');
+            if (html.length > 100) {
+              let textarea = keyDiv.querySelector('textarea');
+              if (!textarea) {
+                textarea = document.createElement('textarea');
+                textarea.rows = 5;
+                keyDiv.appendChild(textarea);
+              }
+              textarea.value = html;
+            }
+            break;
+          }
+        }
+        return null;
+      },
     }
   });
 </script>
