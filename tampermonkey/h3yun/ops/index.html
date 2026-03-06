@@ -64,7 +64,7 @@
           bizObjectAll: `select * from i_{schemaCode}  order by createdtime desc`,
           workflowInstanceKey:`select * from h_workflowinstance where bizobjectid = '{bizObjectId}'`,
           workItemKey:`select (select name from h_user where h_user.objectid=Participant) as username, h_workitem.* from h_workitem where bizobjectid = '{bizObjectId}' order by tokenId`,
-          formSetting:`select SchemaCode,(select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,ModifiedTime,Actions,REGEXP_REPLACE( REGEXP_REPLACE(FormContent, '^<string>', ''),  '</string>$', ''  ) FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
+          formSetting:`select SchemaCode,(select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,ModifiedTime,Actions,SmartActionCodes,REGEXP_REPLACE( REGEXP_REPLACE(FormContent, '^<string>', ''),  '</string>$', ''  ) FormContent,BehindCode,NewJsCode from h_publishedformsetting where schemacode='{schemaCode}'`,
           listViewSetting:`select  * from h_publishedlistviewsetting where schemacode='{schemaCode}'`,
           trigger:`select  * from h_trigger where schemacode='{schemaCode}'`,
           bizObjectSchema:`select  SchemaCode,  (select displayname from h_functionnode where h_functionnode.code=schemacode)  DisplayName,CreatedTime,ModifiedTime, ExtractValue(Content, '/BizObjectSchema/Properties/PropertySchema/ChildSchema/BizObjectSchema/DisplayName') ChildSchemaNames ,ExtractValue(Content, '/BizObjectSchema/Properties/PropertySchema/ChildSchema/BizObjectSchema/SchemaCode') ChildSchemaCodes,Content  from h_publishedbizobjectschema where schemacode='{schemaCode}' or ChildSchemas like '%{schemaCode}%'`,
@@ -366,7 +366,13 @@
                 textarea.rows = 5;
                 keyDiv.appendChild(textarea);
               }
-              textarea.value = html;
+              textarea.value = html.replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&amp;/g, '&')
+              .replace(/&amp;lt;/g, '<')
+              .replace(/&amp;gt;/g, '>')
+              .replace(/&amp;amp;/g, '&')
+              .replace(/<\/?string>/g, '');;
             }
             break;
           }
