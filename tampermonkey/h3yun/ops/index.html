@@ -272,6 +272,7 @@
           setTimeout(() => {
             //this.formatContent();
             this.formatBehindCode()
+            this.formatNewJsCode()
           }, 3000);
         }
 
@@ -285,6 +286,9 @@
       },
        formatBehindCode(){
         this.editContent('BehindCode');
+      },
+       formatNewJsCode(){
+        this.editContent('NewJsCode');
       },
       formatJson(jsonString){
           try {
